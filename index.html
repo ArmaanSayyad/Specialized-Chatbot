@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AskObi Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f7f7f8;
+        }
+
+        #chat-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 1.2em;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f7f7f8;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 70%;
+            word-wrap: break-word;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+
+        .user-message .message-content {
+            background-color: #007bff;
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .bot-message .message-content {
+            background-color: #e9ecef;
+            color: black;
+            border-bottom-left-radius: 0;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+        }
+
+        .typing-dot {
+            display: inline-block;
+            background-color: #01060c;
+            border-radius: 50%;
+            width: 5px;
+            height: 5px;
+            margin-right: 5px;
+            animation: typing-dot 1.5s infinite;
+        }
+
+        @keyframes typing-dot {
+            0%, 50%, 100% {
+                opacity: 1;
+            }
+            25%, 75% {
+                opacity: 0;
+            }
+        }
+
+        #chat-input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+
+        #send-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">AskObi</div>
+        <div id="chat-history"></div>
+        <div id="chat-input-container">
+            <input type="text" id="user-input" placeholder="Enter your message" autofocus>
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        let autoScrollEnabled = true;
+        let isBotTyping = false;
+
+        function addMessage(content, className) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', className);
+            messageElement.innerHTML = `<div class="message-content">${content}</div>`;
+            chatHistory.appendChild(messageElement);
+            if (autoScrollEnabled) {
+                scrollToBottom();
+            }
+        }
+
+        function addTypingIndicator() {
+            const typingIndicator = document.createElement('div');
+            typingIndicator.classList.add('message', 'bot-message', 'typing-indicator');
+            typingIndicator.innerHTML = `
+                <div class="message-content">
+                    <span class="typing-dot"></span>
+                </div>`;
+            chatHistory.appendChild(typingIndicator);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = chatHistory.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                chatHistory.removeChild(typingIndicator);
+            }
+        }
+
+        function isUserAtBottom() {
+            return chatHistory.scrollHeight - chatHistory.clientHeight <= chatHistory.scrollTop + 1;
+        }
+
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userMessage = userInput.value.trim();
+            if (!userMessage || isBotTyping) return;
+
+            addMessage(userMessage, 'user-message');
+            userInput.value = '';
+
+            isBotTyping = true;
+            sendButton.disabled = true;
+
+            addTypingIndicator();
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userInput: userMessage }),
+                });
+
+                const data = await response.json();
+                const botResponse = data.response;
+
+                removeTypingIndicator();
+                await simulateTyping(botResponse);
+
+            } catch (error) {
+                console.error('Error:', error);
+                removeTypingIndicator();
+                addMessage('Sorry, something went wrong. Please try again.', 'bot-message');
+            }
+
+            isBotTyping = false;
+            sendButton.disabled = false;
+        }
+
+        async function simulateTyping(message) {
+            const typingDelay = 25;
+            autoScrollEnabled = true;
+            for (let i = 0; i < message.length; i++) {
+                addMessageChunk(message.substring(0, i + 1), 'bot-message');
+                await new Promise(resolve => setTimeout(resolve, typingDelay));
+            }
+            autoScrollEnabled = false;
+            if (isUserAtBottom()) {
+                scrollToBottom();
+            }
+        }
+
+        function addMessageChunk(content, className) {
+            let lastMessage = chatHistory.lastElementChild;
+            if (!lastMessage || !lastMessage.classList.contains(className)) {
+                lastMessage = document.createElement('div');
+                lastMessage.classList.add('message', className);
+                lastMessage.innerHTML = `<div class="message-content"></div>`;
+                chatHistory.appendChild(lastMessage);
+            }
+            lastMessage.querySelector('.message-content').innerHTML = content;
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', event => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        chatHistory.addEventListener('scroll', () => {
+            if (!isUserAtBottom()) {
+                autoScrollEnabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
