@@ -119,7 +119,7 @@
             font-size: 1em;
         }
 
-        #send-button {
+        #send-button, #stop-button {
             background-color: #007bff;
             color: white;
             border: none;
@@ -127,6 +127,11 @@
             border-radius: 20px;
             cursor: pointer;
             font-size: 1em;
+            margin-left: 5px;
+        }
+
+        #stop-button {
+            background-color: #dc3545;
         }
     </style>
 </head>
@@ -137,6 +142,7 @@
         <div id="chat-input-container">
             <input type="text" id="user-input" placeholder="Enter your message" autofocus>
             <button id="send-button">Send</button>
+            <button id="stop-button">Stop</button>
         </div>
     </div>
     
@@ -144,8 +150,10 @@
         const chatHistory = document.getElementById('chat-history');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
+        const stopButton = document.getElementById('stop-button');
         let autoScrollEnabled = true;
         let isBotTyping = false;
+        let stopTyping = false;
 
         function addMessage(content, className) {
             const messageElement = document.createElement('div');
@@ -192,6 +200,7 @@
 
             isBotTyping = true;
             sendButton.disabled = true;
+            stopButton.disabled = false;
 
             addTypingIndicator();
 
@@ -208,6 +217,7 @@
                 const botResponse = data.response;
 
                 removeTypingIndicator();
+                stopTyping = false;
                 await simulateTyping(botResponse);
 
             } catch (error) {
@@ -218,12 +228,14 @@
 
             isBotTyping = false;
             sendButton.disabled = false;
+            stopButton.disabled = true;
         }
 
         async function simulateTyping(message) {
             const typingDelay = 25;
             autoScrollEnabled = true;
             for (let i = 0; i < message.length; i++) {
+                if (stopTyping) break;
                 addMessageChunk(message.substring(0, i + 1), 'bot-message');
                 await new Promise(resolve => setTimeout(resolve, typingDelay));
             }
@@ -245,6 +257,13 @@
         }
 
         sendButton.addEventListener('click', sendMessage);
+        stopButton.addEventListener('click', () => {
+            stopTyping = true;
+            isBotTyping = false;
+            sendButton.disabled = false;
+            stopButton.disabled = true;
+            removeTypingIndicator();
+        });
         userInput.addEventListener('keypress', event => {
             if (event.key === 'Enter') {
                 sendMessage();
