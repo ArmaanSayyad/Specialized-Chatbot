@@ -14,6 +14,38 @@
             margin: 0;
             background-color: #f7f7f8;
         }
+        #speech-button {
+    background-color: #28a745; /* Green color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-left: 5px;
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+#speech-button:hover {
+    background-color: #218838; /* Darker shade of green on hover */
+}
+#read-aloud-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-left: 5px;
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+#read-aloud-button.active {
+    background-color: #6c757d; /* Darker shade for active state */
+}
+
+
 
         .header-container {
             position: fixed;
@@ -35,10 +67,11 @@
         }
 
         .header-container .menu a {
-            margin-right: 1rem; /* adjust as needed */
+            margin-right: 5rem; /* adjust as needed */
             cursor: pointer;
             text-decoration: none; /* remove underline */
             color: black; /* black color */
+            
         }
 
         .header-container .cta button {
@@ -198,6 +231,10 @@
                 <input type="text" id="user-input" placeholder="Enter your message" autofocus>
                 <button id="send-button">Send</button>
                 <button id="stop-button">Stop</button>
+                <button id="speech-button">Speak</button>
+                <button id="read-aloud-button">Read Aloud</button>
+
+
             </div>
         </div>
     </div>
@@ -207,59 +244,69 @@
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
         const stopButton = document.getElementById('stop-button');
+        const speechButton = document.getElementById('speech-button');
         let autoScrollEnabled = true;
         let isBotTyping = false;
         let stopTyping = false;
-
-        function addMessage(content, className) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message', className);
-            messageElement.innerHTML = `<div class="message-content">${content}</div>`;
-            chatHistory.appendChild(messageElement);
-            if (autoScrollEnabled) {
-                scrollToBottom();
+    
+        // Speech recognition setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true; // Continuous listening
+    
+        recognition.onstart = () => {
+            console.log('Voice recognition started. Speak your message.');
+        };
+    
+        recognition.onresult = event => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            userInput.value = transcript;
+            sendMessage();
+        };
+    
+        recognition.onerror = event => {
+            console.error('Speech recognition error:', event.error);
+        };
+    
+        recognition.onend = () => {
+            if (!userInput.value.trim()) {
+                recognition.start(); // Restart listening if no input
             }
+        };
+    
+        function startRecognition() {
+            recognition.start();
+            speechButton.textContent = 'Listening...';
+            speechButton.disabled = true;
         }
-
-        function addTypingIndicator() {
-            const typingIndicator = document.createElement('div');
-            typingIndicator.classList.add('message', 'bot-message', 'typing-indicator');
-            typingIndicator.innerHTML = `
-                <div class="message-content">
-                    <span class="typing-dot"></span>
-                </div>`;
-            chatHistory.appendChild(typingIndicator);
-            scrollToBottom();
+    
+        function stopRecognition() {
+            recognition.stop();
+            speechButton.textContent = 'Speak';
+            speechButton.disabled = false;
         }
-
-        function removeTypingIndicator() {
-            const typingIndicator = chatHistory.querySelector('.typing-indicator');
-            if (typingIndicator) {
-                chatHistory.removeChild(typingIndicator);
+    
+        speechButton.addEventListener('click', () => {
+            if (recognition.running) {
+                stopRecognition();
+            } else {
+                startRecognition();
             }
-        }
-
-        function isUserAtBottom() {
-            return chatHistory.scrollHeight - chatHistory.clientHeight <= chatHistory.scrollTop + 1;
-        }
-
-        function scrollToBottom() {
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
-
+        });
+    
         async function sendMessage() {
             const userMessage = userInput.value.trim();
             if (!userMessage || isBotTyping) return;
-
+    
             addMessage(userMessage, 'user-message');
             userInput.value = '';
-
+    
             isBotTyping = true;
             sendButton.disabled = true;
             stopButton.disabled = false;
-
+    
             addTypingIndicator();
-
+    
             try {
                 const response = await fetch('/chat', {
                     method: 'POST',
@@ -268,25 +315,25 @@
                     },
                     body: JSON.stringify({ userInput: userMessage }),
                 });
-
+    
                 const data = await response.json();
                 const botResponse = data.response;
-
+    
                 removeTypingIndicator();
                 stopTyping = false;
                 await simulateTyping(botResponse);
-
+    
             } catch (error) {
                 console.error('Error:', error);
                 removeTypingIndicator();
                 addMessage('Sorry, something went wrong. Please try again.', 'bot-message');
             }
-
+    
             isBotTyping = false;
             sendButton.disabled = false;
             stopButton.disabled = true;
         }
-
+    
         async function simulateTyping(message) {
             const typingDelay = 25;
             autoScrollEnabled = true;
@@ -300,7 +347,7 @@
                 scrollToBottom();
             }
         }
-
+    
         function addMessageChunk(content, className) {
             let lastMessage = chatHistory.lastElementChild;
             if (!lastMessage || !lastMessage.classList.contains(className)) {
@@ -311,7 +358,43 @@
             }
             lastMessage.querySelector('.message-content').innerHTML = content;
         }
-
+    
+        function addMessage(content, className) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', className);
+            messageElement.innerHTML = `<div class="message-content">${content}</div>`;
+            chatHistory.appendChild(messageElement);
+            if (autoScrollEnabled) {
+                scrollToBottom();
+            }
+        }
+    
+        function addTypingIndicator() {
+            const typingIndicator = document.createElement('div');
+            typingIndicator.classList.add('message', 'bot-message', 'typing-indicator');
+            typingIndicator.innerHTML = `
+                <div class="message-content">
+                    <span class="typing-dot"></span>
+                </div>`;
+            chatHistory.appendChild(typingIndicator);
+            scrollToBottom();
+        }
+    
+        function removeTypingIndicator() {
+            const typingIndicator = chatHistory.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                chatHistory.removeChild(typingIndicator);
+            }
+        }
+    
+        function isUserAtBottom() {
+            return chatHistory.scrollHeight - chatHistory.clientHeight <= chatHistory.scrollTop + 1;
+        }
+    
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+    
         sendButton.addEventListener('click', sendMessage);
         stopButton.addEventListener('click', () => {
             stopTyping = true;
@@ -323,14 +406,61 @@
         userInput.addEventListener('keypress', event => {
             if (event.key === 'Enter') {
                 sendMessage();
+            } else {
+                recognition.stop(); // Stop listening when user starts typing
             }
         });
-
+    
         chatHistory.addEventListener('scroll', () => {
             if (!isUserAtBottom()) {
                 autoScrollEnabled = false;
             }
         });
+
+        const readAloudButton = document.getElementById('read-aloud-button');
+let speechInstance = null; // To store the SpeechSynthesisUtterance instance
+let clickCount = 0; // Variable to count button clicks
+
+readAloudButton.addEventListener('click', () => {
+    clickCount++; // Increment click count on each click
+
+    const latestBotMessage = chatHistory.querySelector('.bot-message:last-child .message-content');
+
+    if (latestBotMessage) {
+        const messageText = latestBotMessage.textContent.trim();
+
+        if (clickCount % 2 === 1) {
+            // Even click count, stop speech if it's speaking
+            if (speechInstance && speechInstance.speaking) {
+                window.speechSynthesis.cancel();
+                speechInstance = null;
+                
+            }
+        } else {
+            // Odd click count, read aloud the latest message
+            if ('speechSynthesis' in window) {
+                speechInstance = new SpeechSynthesisUtterance(messageText);
+                speechInstance.lang = 'en-US';
+                speechInstance.volume = 1;
+                speechInstance.rate = 1;
+                speechInstance.pitch = 1;
+
+                window.speechSynthesis.speak(speechInstance);
+                
+            } else {
+                console.error('Speech synthesis not supported');
+            }
+        }
+    } else {
+        console.error('No bot messages found');
+    }
+
+    stopRecognition(); // Stop speech recognition after each click
+});
+
+
+    
     </script>
+    
 </body>
 </html>
