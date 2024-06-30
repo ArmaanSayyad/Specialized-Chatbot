@@ -10,10 +10,52 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             height: 100vh;
             margin: 0;
             background-color: #f7f7f8;
+        }
+
+        .header-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: #f7f7f8;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .header-container .logo {
+            margin-left: 7.2rem;
+            font-size: 2.25rem; /* equivalent to text-4xl */
+        }
+
+        .header-container .menu a {
+            margin-right: 1rem; /* adjust as needed */
+            cursor: pointer;
+            text-decoration: none; /* remove underline */
+            color: black; /* black color */
+        }
+
+        .header-container .cta button {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600; /* equivalent to font-semibold */
+            padding: 8px 32px;
+            border-radius: 9999px; /* equivalent to rounded-full */
+            border: none;
+            cursor: pointer;
+        }
+
+        #main-content {
+            margin-top: 100px; /* Add margin to create space between header and main content */
+            width: 100%;
+            display: flex;
+            justify-content: center;
         }
 
         #chat-container {
@@ -136,16 +178,30 @@
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <div id="chat-header">AskObi</div>
-        <div id="chat-history"></div>
-        <div id="chat-input-container">
-            <input type="text" id="user-input" placeholder="Enter your message" autofocus>
-            <button id="send-button">Send</button>
-            <button id="stop-button">Stop</button>
+    <div class="header-container">
+        <div class="logo">AskObi.</div>
+        <div class="menu">
+            <a href="https://chatbot-front-end-lime.vercel.app">Home</a>
+            <a href="https://chatbot-front-end-lime.vercel.app/About">About</a>
+            <a href="https://chatbot-front-end-lime.vercel.app/testimonials">Testimonials</a>
+        </div>
+        <div class="cta">
+            <!-- <button onclick="window.location.href='https://ask-obi-90c3b991758d.herokuapp.com'">Go To Chat</button> -->
         </div>
     </div>
-    
+
+    <div id="main-content">
+        <div id="chat-container">
+            <div id="chat-header">AskObi</div>
+            <div id="chat-history"></div>
+            <div id="chat-input-container">
+                <input type="text" id="user-input" placeholder="Enter your message" autofocus>
+                <button id="send-button">Send</button>
+                <button id="stop-button">Stop</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const chatHistory = document.getElementById('chat-history');
         const userInput = document.getElementById('user-input');
